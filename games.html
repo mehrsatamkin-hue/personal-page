@@ -57,8 +57,8 @@
       let progress = 0;
 
       const animateJump = () => {
-        progress += 0.075;
-        const height = Math.sin(progress * Math.PI) * 175;
+        progress += 0.045;
+        const height = Math.sin(progress * Math.PI) * 225;
         chicken.style.transform = `translateY(${-height}px)`;
 
         if (progress < 1) {
