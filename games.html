@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>بازی‌های مهسا — پرش جوجه</title>
+  <title>بازی‌های مهرسا — پرش جوجه</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet" />
@@ -29,13 +29,155 @@
     <div class="footer">ساخته شده با کنجکاوی و شکلات 🍫</div>
   </div>
   <script>
-    const game=document.querySelector('#game'),chicken=document.querySelector('#chicken'),overlay=document.querySelector('#overlay'),start=document.querySelector('#start'),scoreEl=document.querySelector('#score'),livesEl=document.querySelector('#lives'),stageEl=document.querySelector('#stage'),title=document.querySelector('#modalTitle'),text=document.querySelector('#modalText');
-    let jumping=false,playing=false,score=0,lives=5,stage=1,raf,startedAt,invulnerableUntil=0;
-    const jump=()=>{if(!playing||jumping)return;jumping=true;let t=0;const animate=()=>{t+=.09;const y=Math.sin(t*Math.PI)*175;chicken.style.transform=`translateY(${-y}px)`;if(t<1)requestAnimationFrame(animate);else{chicken.style.transform='';jumping=false}};requestAnimationFrame(animate)};
-    const collision=()=>{const c=chicken.getBoundingClientRect();return [...document.querySelectorAll('.obstacle')].some(o=>{const r=o.getBoundingClientRect();return c.left+18<r.right&&c.right-18>r.left&&c.bottom-16>r.top&&c.top<r.bottom})};
-    const loop=()=>{if(!playing)return;if(Date.now()>=invulnerableUntil&&collision()){lives--;invulnerableUntil=Date.now()+1200;livesEl.textContent='♥ '.repeat(lives)+'♡ '.repeat(5-lives);chicken.style.left='';if(!lives)return end(false);playing=false;setTimeout(()=>{playing=true;raf=requestAnimationFrame(loop)},700);return}score=Math.min(120,Math.floor((Date.now()-startedAt)/100));scoreEl.textContent=String(score).padStart(3,'0');const nextStage=score>=80?3:score>=40?2:1;if(nextStage!==stage){stage=nextStage;stageEl.textContent=`مرحله ${stage} از ۳`}if(score>=120)return end(true);raf=requestAnimationFrame(loop)};
-    const end=won=>{playing=false;cancelAnimationFrame(raf);title.textContent=won?'🎉 بردی!':'اوه نه!';text.textContent=won?'جوجه به پرچم رسید و هر سه مرحله را کامل کرد.':'موانع کمی سخت بودند؛ دوباره امتحان کن!';start.textContent=won?'بازی دوباره':'تلاش دوباره';overlay.classList.remove('hidden')};
-    const begin=()=>{score=0;lives=5;stage=1;playing=true;jumping=false;invulnerableUntil=0;scoreEl.textContent='۰۰۰';livesEl.textContent='♥ ♥ ♥ ♥ ♥';stageEl.textContent='مرحله ۱ از ۳';overlay.classList.add('hidden');startedAt=Date.now();raf=requestAnimationFrame(loop)};start.addEventListener('click',begin);game.addEventListener('pointerdown',e=>{if(e.target!==start)jump()});document.addEventListener('keydown',e=>{if(['Space','ArrowUp'].includes(e.code)){e.preventDefault();if(!playing)begin();else jump()}});
+    const game = document.querySelector('#game');
+    const chicken = document.querySelector('#chicken');
+    const overlay = document.querySelector('#overlay');
+    const start = document.querySelector('#start');
+    const scoreEl = document.querySelector('#score');
+    const livesEl = document.querySelector('#lives');
+    const stageEl = document.querySelector('#stage');
+    const title = document.querySelector('#modalTitle');
+    const text = document.querySelector('#modalText');
+    const obstacles = [...document.querySelectorAll('.obstacle')];
+
+    let jumping = false;
+    let playing = false;
+    let score = 0;
+    let lives = 5;
+    let stage = 1;
+    let animationFrame;
+    let startedAt = 0;
+    let obstacleStartedAt = 0;
+    let invulnerableUntil = 0;
+
+    const jump = () => {
+      if (!playing || jumping) return;
+
+      jumping = true;
+      let progress = 0;
+
+      const animateJump = () => {
+        progress += 0.075;
+        const height = Math.sin(progress * Math.PI) * 175;
+        chicken.style.transform = `translateY(${-height}px)`;
+
+        if (progress < 1) {
+          requestAnimationFrame(animateJump);
+        } else {
+          chicken.style.transform = '';
+          jumping = false;
+        }
+      };
+
+      requestAnimationFrame(animateJump);
+    };
+
+    const moveObstacles = () => {
+      const elapsed = (performance.now() - obstacleStartedAt) / 1000;
+      const gameWidth = game.clientWidth;
+
+      obstacles.forEach((obstacle, index) => {
+        const startingPoint = gameWidth + 100 + index * 210;
+        const routeLength = startingPoint + 170;
+        const speed = 115 + index * 7 + stage * 6;
+        const left = startingPoint - (elapsed * speed % routeLength);
+
+        obstacle.style.right = 'auto';
+        obstacle.style.left = `${left}px`;
+      });
+    };
+
+    const hasCollision = () => {
+      const chickenBox = chicken.getBoundingClientRect();
+
+      return obstacles.some((obstacle) => {
+        const obstacleBox = obstacle.getBoundingClientRect();
+
+        return chickenBox.left + 18 < obstacleBox.right
+          && chickenBox.right - 18 > obstacleBox.left
+          && chickenBox.bottom - 16 > obstacleBox.top
+          && chickenBox.top < obstacleBox.bottom;
+      });
+    };
+
+    const end = (won) => {
+      playing = false;
+      cancelAnimationFrame(animationFrame);
+      title.textContent = won ? '🎉 بردی!' : 'اوه نه!';
+      text.textContent = won
+        ? 'جوجه به پرچم رسید و هر سه مرحله را کامل کرد.'
+        : 'چند پرش دیگر تا بردن فاصله داری؛ دوباره امتحان کن!';
+      start.textContent = won ? 'بازی دوباره' : 'تلاش دوباره';
+      overlay.classList.remove('hidden');
+    };
+
+    const gameLoop = () => {
+      if (!playing) return;
+
+      moveObstacles();
+
+      if (Date.now() >= invulnerableUntil && hasCollision()) {
+        lives -= 1;
+        invulnerableUntil = Date.now() + 1200;
+        livesEl.textContent = '♥ '.repeat(lives) + '♡ '.repeat(5 - lives);
+
+        if (!lives) {
+          end(false);
+          return;
+        }
+
+        playing = false;
+        setTimeout(() => {
+          obstacleStartedAt = performance.now();
+          playing = true;
+          animationFrame = requestAnimationFrame(gameLoop);
+        }, 700);
+        return;
+      }
+
+      score = Math.min(120, Math.floor((Date.now() - startedAt) / 100));
+      scoreEl.textContent = String(score).padStart(3, '0');
+      const nextStage = score >= 80 ? 3 : score >= 40 ? 2 : 1;
+
+      if (nextStage !== stage) {
+        stage = nextStage;
+        stageEl.textContent = `مرحله ${stage} از ۳`;
+      }
+
+      if (score >= 120) {
+        end(true);
+        return;
+      }
+
+      animationFrame = requestAnimationFrame(gameLoop);
+    };
+
+    const begin = () => {
+      score = 0;
+      lives = 5;
+      stage = 1;
+      playing = true;
+      jumping = false;
+      invulnerableUntil = 0;
+      scoreEl.textContent = '۰۰۰';
+      livesEl.textContent = '♥ ♥ ♥ ♥ ♥';
+      stageEl.textContent = 'مرحله ۱ از ۳';
+      overlay.classList.add('hidden');
+      startedAt = Date.now();
+      obstacleStartedAt = performance.now();
+      animationFrame = requestAnimationFrame(gameLoop);
+    };
+
+    start.addEventListener('click', begin);
+    game.addEventListener('pointerdown', () => {
+      if (overlay.classList.contains('hidden')) jump();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (!['Space', 'ArrowUp'].includes(event.code)) return;
+      event.preventDefault();
+      if (!playing) begin();
+      else jump();
+    });
   </script>
 </body>
 </html>
